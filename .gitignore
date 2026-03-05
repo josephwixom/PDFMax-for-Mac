@@ -1,0 +1,49 @@
+# ─── Node / npm ──────────────────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ─── Next.js ─────────────────────────────────────────────────────────────────
+apps/web/.next/
+apps/web/out/
+apps/web/tsconfig.tsbuildinfo
+
+# ─── Electron build outputs ───────────────────────────────────────────────────
+apps/desktop/dist/
+apps/desktop/dist-electron/
+apps/desktop/node_modules/
+
+# ─── NestJS build ────────────────────────────────────────────────────────────
+apps/api/dist/
+apps/api/node_modules/
+
+# ─── Package build artifacts ─────────────────────────────────────────────────
+packages/*/dist/
+packages/*/node_modules/
+
+# ─── Environment / secrets ────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.pem
+
+# ─── macOS system files ───────────────────────────────────────────────────────
+.DS_Store
+**/.DS_Store
+*.swp
+
+# ─── Editor ──────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# ─── Turbo ───────────────────────────────────────────────────────────────────
+.turbo/
+
+# ─── iOS (Capacitor) ─────────────────────────────────────────────────────────
+apps/web/ios/Pods/
+apps/web/ios/.xcode.env.local

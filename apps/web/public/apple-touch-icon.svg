@@ -1,0 +1,6 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'>
+  <rect width='180' height='180' rx='32.4' fill='#111827'/>
+  <rect x='10.799999999999999' y='10.799999999999999' width='158.4' height='158.4' rx='25.92' fill='none' stroke='#2563eb' stroke-width='7.2'/>
+  <text x='50%' y='52%' dominant-baseline='middle' text-anchor='middle' font-family='Arial, sans-serif' font-weight='bold' font-size='93.60000000000001' fill='white'>P</text>
+  <rect x='61.2' y='125.99999999999999' width='57.6' height='9' rx='3.6' fill='#ef4444'/>
+</svg>

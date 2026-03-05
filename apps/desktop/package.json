@@ -1,0 +1,83 @@
+{
+    "name": "desktop",
+    "version": "1.0.0",
+    "description": "PDF Max — standalone macOS desktop app",
+    "private": true,
+    "main": "dist-electron/main.js",
+    "scripts": {
+        "build:next": "cd ../web && ELECTRON=1 next build",
+        "build:electron": "tsc -p tsconfig.json",
+        "dev": "npm run build:next && npm run build:electron && electron .",
+        "build:mac": "npm run build:next && npm run build:electron && electron-builder --mac",
+        "build:mac:unsigned": "npm run build:next && npm run build:electron && electron-builder --mac --config.mac.identity=null"
+    },
+    "devDependencies": {
+        "@electron/packager": "^19.0.5",
+        "@types/node": "^20.0.0",
+        "electron": "^35.0.0",
+        "electron-builder": "^25.1.8",
+        "typescript": "^5.7.0"
+    },
+    "build": {
+        "appId": "com.pdfmax.desktop",
+        "productName": "PDF Max",
+        "copyright": "Copyright © 2025 PDF Max",
+        "directories": {
+            "output": "dist",
+            "buildResources": "build"
+        },
+        "files": [
+            "dist-electron/**/*",
+            "!../web/node_modules/**/*"
+        ],
+        "extraResources": [
+            {
+                "from": "../web/out",
+                "to": "app",
+                "filter": [
+                    "**/*"
+                ]
+            }
+        ],
+        "mac": {
+            "category": "public.app-category.productivity",
+            "target": [
+                {
+                    "target": "dmg",
+                    "arch": [
+                        "arm64",
+                        "x64"
+                    ]
+                },
+                {
+                    "target": "dir",
+                    "arch": [
+                        "arm64",
+                        "x64"
+                    ]
+                }
+            ],
+            "icon": "build/icon.png",
+            "hardenedRuntime": false,
+            "gatekeeperAssess": false
+        },
+        "dmg": {
+            "title": "PDF Max ${version}",
+            "icon": "build/icon.png",
+            "contents": [
+                {
+                    "x": 130,
+                    "y": 220
+                },
+                {
+                    "x": 410,
+                    "y": 220,
+                    "type": "link",
+                    "path": "/Applications"
+                }
+            ]
+        },
+        "asar": true,
+        "compression": "maximum"
+    }
+}

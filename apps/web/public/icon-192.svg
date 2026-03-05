@@ -1,0 +1,6 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='192' height='192' viewBox='0 0 192 192'>
+  <rect width='192' height='192' rx='34.56' fill='#111827'/>
+  <rect x='11.52' y='11.52' width='168.96' height='168.96' rx='27.648000000000003' fill='none' stroke='#2563eb' stroke-width='7.68'/>
+  <text x='50%' y='52%' dominant-baseline='middle' text-anchor='middle' font-family='Arial, sans-serif' font-weight='bold' font-size='99.84' fill='white'>P</text>
+  <rect x='65.28' y='134.39999999999998' width='61.44' height='9.600000000000001' rx='3.84' fill='#ef4444'/>
+</svg>
