@@ -1,0 +1,97 @@
+name: Build macOS DMG
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm install --ignore-scripts
+
+      - name: Build Next.js static export
+        run: |
+          cd apps/web
+          ELECTRON=1 npx next build
+
+      - name: Install Electron desktop dependencies
+        run: |
+          cd apps/desktop
+          npm install --ignore-scripts
+          # Download and extract Electron binary
+          VERSION=$(node -e "console.log(require('./node_modules/electron/package.json').version)")
+          mkdir -p /tmp/electron-cache
+          curl -L "https://github.com/electron/electron/releases/download/v${VERSION}/electron-v${VERSION}-darwin-arm64.zip" -o "/tmp/electron-${VERSION}-arm64.zip"
+          unzip -o "/tmp/electron-${VERSION}-arm64.zip" -d node_modules/electron
+          echo "Electron.app/Contents/MacOS/Electron" > node_modules/electron/path.txt
+
+      - name: Compile Electron main process
+        run: |
+          cd apps/desktop
+          npx tsc -p tsconfig.json
+
+      - name: Assemble .app bundle
+        run: |
+          cd apps/desktop
+          bash build-app.sh
+
+      - name: Create DMG
+        run: |
+          APP="apps/desktop/dist/mac-arm64/PDF Max.app"
+          STAGING="/tmp/pdfmax-dmg-staging"
+          rm -rf "$STAGING" && mkdir -p "$STAGING"
+          cp -R "$APP" "$STAGING/"
+          ln -s /Applications "$STAGING/Applications"
+          hdiutil create \
+            -volname "PDF Max" \
+            -srcfolder "$STAGING" \
+            -ov \
+            -format UDZO \
+            -imagekey zlib-level=9 \
+            "apps/desktop/dist/PDF-Max-arm64.dmg"
+          ls -lh apps/desktop/dist/PDF-Max-arm64.dmg
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PDF-Max-dmg
+          path: apps/desktop/dist/PDF-Max-arm64.dmg
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: apps/desktop/dist/PDF-Max-arm64.dmg
+          name: PDF Max ${{ github.ref_name }}
+          body: |
+            ## PDF Max ${{ github.ref_name }}
+            
+            Professional PDF annotation tool for macOS (Apple Silicon).
+            
+            ### Install
+            1. Download `PDF-Max-arm64.dmg` below
+            2. Open the DMG and drag **PDF Max** to your Applications folder
+            3. Right-click → Open the first time (unsigned app)
+            
+            ### What's included
+            - Full annotation suite (rectangles, clouds, callouts, arrows, freehand)
+            - Measurement tools with calibration
+            - Vector snap engine
+            - OCR, DXF import, PDF export with annotations
+            - Native macOS menus and file dialogs
+          draft: false
+          prerelease: false
