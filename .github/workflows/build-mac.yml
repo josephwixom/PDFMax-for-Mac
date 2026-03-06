@@ -22,27 +22,32 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install web app dependencies
+      # Install all workspace deps from root (handles apps/web, packages/*, etc.)
+      # Use --ignore-scripts to skip electron postinstall (we handle it manually)
+      - name: Install all workspace dependencies
+        run: npm install --ignore-scripts
+
+      # Build shared packages that apps/web depends on at build time
+      - name: Build workspace packages
         run: |
-          cd apps/web
-          npm install --ignore-scripts
+          cd packages/shared && npx tsc -p tsconfig.json || true
+          cd ../../packages/pdf-engine && npx tsc -p tsconfig.json || true
 
       - name: Build Next.js static export
         run: |
           cd apps/web
-          ELECTRON=1 npx next build
+          ELECTRON=1 npm run build
 
-      - name: Install Electron desktop dependencies + binary
+      - name: Download and install Electron binary
         run: |
           cd apps/desktop
-          npm install --ignore-scripts
           VERSION=$(node -e "console.log(require('./node_modules/electron/package.json').version)")
           echo "Downloading Electron v${VERSION} arm64..."
-          curl -fsSL "https://github.com/electron/electron/releases/download/v${VERSION}/electron-v${VERSION}-darwin-arm64.zip" \
+          curl -fsSL \
+            "https://github.com/electron/electron/releases/download/v${VERSION}/electron-v${VERSION}-darwin-arm64.zip" \
             -o /tmp/electron-darwin-arm64.zip
           unzip -o /tmp/electron-darwin-arm64.zip -d node_modules/electron
           echo "Electron.app/Contents/MacOS/Electron" > node_modules/electron/path.txt
-          echo "Electron binary ready:"
           ls node_modules/electron/Electron.app/Contents/MacOS/
 
       - name: Compile Electron TypeScript
@@ -94,9 +99,9 @@ jobs:
             3. First launch: **right-click → Open** (bypass Gatekeeper for unsigned app)
 
             ### Features
-            - Full annotation suite: rectangles, clouds, callouts, arrows, freehand, text
+            - Annotation suite: rectangles, callout clouds, arrows, freehand, text
             - Measurement tools (length, area, perimeter, count) with calibration
-            - Vector snap engine (endpoint, intersection, midpoint, grid snapping)
+            - Vector snap engine (endpoint, intersection, midpoint, grid)
             - OCR, DXF import, PDF export with flattened annotations
             - Native macOS menus and file dialogs
             - Undo/redo per page, layer management
