@@ -22,12 +22,11 @@ jobs:
         with:
           node-version: '20'
 
-      # Install all workspace deps from root (handles apps/web, packages/*, etc.)
-      # Use --ignore-scripts to skip electron postinstall (we handle it manually)
+      # Install all workspace deps from root (electron gets hoisted to root node_modules)
       - name: Install all workspace dependencies
         run: npm install --ignore-scripts
 
-      # Build shared packages that apps/web depends on at build time
+      # Build shared packages that apps/web depends on
       - name: Build workspace packages
         run: |
           cd packages/shared && npx tsc -p tsconfig.json || true
@@ -38,17 +37,21 @@ jobs:
           cd apps/web
           ELECTRON=1 npm run build
 
+      # electron is hoisted to root node_modules by npm workspaces
       - name: Download and install Electron binary
         run: |
-          cd apps/desktop
-          VERSION=$(node -e "console.log(require('./node_modules/electron/package.json').version)")
-          echo "Downloading Electron v${VERSION} arm64..."
+          ELECTRON_DIR="node_modules/electron"
+          VERSION=$(node -e "console.log(require('./${ELECTRON_DIR}/package.json').version)")
+          echo "Electron version: ${VERSION}"
+          echo "Downloading electron-v${VERSION}-darwin-arm64.zip..."
           curl -fsSL \
             "https://github.com/electron/electron/releases/download/v${VERSION}/electron-v${VERSION}-darwin-arm64.zip" \
             -o /tmp/electron-darwin-arm64.zip
-          unzip -o /tmp/electron-darwin-arm64.zip -d node_modules/electron
-          echo "Electron.app/Contents/MacOS/Electron" > node_modules/electron/path.txt
-          ls node_modules/electron/Electron.app/Contents/MacOS/
+          echo "Extracting..."
+          unzip -o /tmp/electron-darwin-arm64.zip -d "${ELECTRON_DIR}"
+          echo "Electron.app/Contents/MacOS/Electron" > "${ELECTRON_DIR}/path.txt"
+          echo "Binary ready:"
+          ls "${ELECTRON_DIR}/Electron.app/Contents/MacOS/"
 
       - name: Compile Electron TypeScript
         run: |
