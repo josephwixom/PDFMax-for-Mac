@@ -5,11 +5,19 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-ELECTRON_APP="$SCRIPT_DIR/node_modules/electron/Electron.app"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# Resolve Electron.app — works whether electron is in local or workspace-hoisted node_modules
+ELECTRON_BIN="$(node -e "process.stdout.write(require('electron'))")"
+ELECTRON_APP="$(dirname "$ELECTRON_BIN")/../.."
+# Normalise to an absolute path (on macOS the electron binary is inside Electron.app)
+ELECTRON_APP="$(cd "$ELECTRON_APP" && pwd)"
+
 OUT_DIR="$SCRIPT_DIR/dist/mac-arm64"
 APP_NAME="PDF Max"
 APP_BUNDLE="$OUT_DIR/$APP_NAME.app"
-WEB_OUT="$SCRIPT_DIR/../web/out"
+WEB_OUT="$REPO_ROOT/apps/web/out"
+
 
 echo "▶︎ Building $APP_NAME.app from pre-extracted Electron..."
 echo "  Electron: $ELECTRON_APP"
