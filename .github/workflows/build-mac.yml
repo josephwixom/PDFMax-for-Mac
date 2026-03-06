@@ -22,11 +22,9 @@ jobs:
         with:
           node-version: '20'
 
-      # Install all workspace deps from root (electron gets hoisted to root node_modules)
       - name: Install all workspace dependencies
         run: npm install --ignore-scripts
 
-      # Build shared packages that apps/web depends on
       - name: Build workspace packages
         run: |
           cd packages/shared && npx tsc -p tsconfig.json || true
@@ -37,21 +35,18 @@ jobs:
           cd apps/web
           ELECTRON=1 npm run build
 
-      # electron is hoisted to root node_modules by npm workspaces
       - name: Download and install Electron binary
         run: |
-          ELECTRON_DIR="node_modules/electron"
-          VERSION=$(node -e "console.log(require('./${ELECTRON_DIR}/package.json').version)")
-          echo "Electron version: ${VERSION}"
-          echo "Downloading electron-v${VERSION}-darwin-arm64.zip..."
+          ELECTRON_PKG=$(node -e "process.stdout.write(require('path').dirname(require.resolve('electron/package.json')))")
+          echo "Electron pkg: $ELECTRON_PKG"
+          VERSION=$(node -e "console.log(require('$ELECTRON_PKG/package.json').version)")
+          echo "Electron version: $VERSION"
           curl -fsSL \
             "https://github.com/electron/electron/releases/download/v${VERSION}/electron-v${VERSION}-darwin-arm64.zip" \
             -o /tmp/electron-darwin-arm64.zip
-          echo "Extracting..."
-          unzip -o /tmp/electron-darwin-arm64.zip -d "${ELECTRON_DIR}"
-          echo "Electron.app/Contents/MacOS/Electron" > "${ELECTRON_DIR}/path.txt"
-          echo "Binary ready:"
-          ls "${ELECTRON_DIR}/Electron.app/Contents/MacOS/"
+          unzip -o /tmp/electron-darwin-arm64.zip -d "$ELECTRON_PKG"
+          echo "Electron.app/Contents/MacOS/Electron" > "$ELECTRON_PKG/path.txt"
+          ls "$ELECTRON_PKG/Electron.app/Contents/MacOS/"
 
       - name: Compile Electron TypeScript
         run: |
@@ -59,10 +54,70 @@ jobs:
           npx tsc -p tsconfig.json
           ls dist-electron/
 
-      - name: Assemble macOS .app bundle
+      - name: Locate Electron.app
+        id: locate_electron
         run: |
-          cd apps/desktop
-          bash build-app.sh
+          ELECTRON_PKG=$(node -e "process.stdout.write(require('path').dirname(require.resolve('electron/package.json')))")
+          echo "Electron pkg dir: $ELECTRON_PKG"
+          ELECTRON_APP="$ELECTRON_PKG/Electron.app"
+          echo "Electron.app path: $ELECTRON_APP"
+          ls "$ELECTRON_APP/Contents/MacOS/"
+          echo "electron_app=$ELECTRON_APP" >> $GITHUB_OUTPUT
+
+      - name: Copy Electron.app to output dir
+        run: |
+          ELECTRON_APP="${{ steps.locate_electron.outputs.electron_app }}"
+          OUT="apps/desktop/dist/mac-arm64/PDF Max.app"
+          mkdir -p "apps/desktop/dist/mac-arm64"
+          rm -rf "$OUT"
+          cp -R "$ELECTRON_APP" "$OUT"
+          echo "✓ Copied Electron.app to: $OUT"
+          ls "$OUT/Contents/MacOS/"
+
+      - name: Rename Electron executable
+        run: |
+          mv "apps/desktop/dist/mac-arm64/PDF Max.app/Contents/MacOS/Electron" \
+             "apps/desktop/dist/mac-arm64/PDF Max.app/Contents/MacOS/PDF Max"
+          echo "✓ Renamed to 'PDF Max'"
+
+      - name: Write Info.plist
+        run: |
+          cat > "apps/desktop/dist/mac-arm64/PDF Max.app/Contents/Info.plist" << 'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleDisplayName</key><string>PDF Max</string>
+            <key>CFBundleExecutable</key><string>PDF Max</string>
+            <key>CFBundleIdentifier</key><string>com.pdfmax.desktop</string>
+            <key>CFBundleName</key><string>PDF Max</string>
+            <key>CFBundlePackageType</key><string>APPL</string>
+            <key>CFBundleShortVersionString</key><string>1.0.0</string>
+            <key>CFBundleVersion</key><string>1.0.0</string>
+            <key>LSMinimumSystemVersion</key><string>11.0</string>
+            <key>NSHighResolutionCapable</key><true/>
+            <key>NSSupportsAutomaticGraphicsSwitching</key><true/>
+            <key>NSRequiresAquaSystemAppearance</key><false/>
+          </dict>
+          </plist>
+          PLIST
+          echo "✓ Info.plist written"
+
+      - name: Copy Electron main process
+        run: |
+          APP="apps/desktop/dist/mac-arm64/PDF Max.app"
+          mkdir -p "$APP/Contents/Resources/app"
+          cp -R apps/desktop/dist-electron "$APP/Contents/Resources/app/"
+          cp apps/desktop/package.json     "$APP/Contents/Resources/app/"
+          echo "✓ Copied dist-electron + package.json"
+
+      - name: Copy web static export
+        run: |
+          APP="apps/desktop/dist/mac-arm64/PDF Max.app"
+          mkdir -p "$APP/Contents/Resources/app-web"
+          cp -R apps/web/out/. "$APP/Contents/Resources/app-web/"
+          echo "✓ Copied web out → Resources/app-web"
+          ls "$APP/Contents/Resources/app-web/" | head -10
 
       - name: Create DMG installer
         run: |
